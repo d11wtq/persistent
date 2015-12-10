@@ -7,8 +7,6 @@ using pointers to shared data, only copying what is modified.
 
 ## Install
 
-Via go get:
-
     $ go get github.com/d11wtq/persistent
 
 ### Data Structures Provided
