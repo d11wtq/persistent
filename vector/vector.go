@@ -7,117 +7,76 @@ const (
 	PARTITION_MASK = 1<<PARTITION_BITS - 1
 )
 
-// What storable values
+// Values storable in the vector
 type Value interface{}
 
-// Representation of a persistent vector node
+// Pointer to the root node and its length
 type Vector struct {
-	// The elements stored in this node
-	Elements []Value
-	// The maximum number of elements
-	Shift uint32
+	// The root node of the vector
+	Root *Node
+	// The number of elements in the vector
+	Length uint32
 }
 
-// Sentinel value for the empty vector
-var EmptyVector = &Vector{
-	Elements: []Value{},
-	Shift:    0,
+// Value for the empty vector
+var empty = &Vector{
+	Root:   &Node{Elements: []Value{}, Shift: 0},
+	Length: 0,
 }
 
 // Return a new empty vector.
-func New() *Vector {
-	return EmptyVector
+func New(elements ...Value) *Vector {
+	acc := empty
+	// FIXME: Bulk load in chunks of 32 elements
+	for _, v := range elements {
+		acc = acc.Append(v)
+	}
+	return acc
 }
 
-// Get the number of elements in this node.
-func (vec *Vector) Width() uint32 {
-	return uint32(len(vec.Elements))
+// Return the number of elements in this vector.
+func (vec *Vector) Count() uint32 {
+	return vec.Length
 }
 
-// Find the element at a given key in the vector.
-// If the key does not exist, (nil, false) is returned.
-func (vec *Vector) Find(key uint32) (Value, bool) {
-	for vec.Shift > 0 {
-		vec = vec.Elements[((key >> vec.Shift) & PARTITION_MASK)].(*Vector)
-	}
-
-	idx := (key & PARTITION_MASK)
-	if vec.Width() > idx {
-		return vec.Elements[idx], true
-	}
-
-	return nil, false
+// Get the value for a given key in the vector.
+// Access to a key that is not in the vector is an OutOfBounds error.
+func (vec *Vector) Get(key uint32) (Value, error) {
+	return vec.Root.Get(key)
 }
 
-// Set key in vector to value, returning a new vector.
-func (vec *Vector) Set(key uint32, value Value) (cpy *Vector, ok bool) {
-	cpy = vec.NewRoot(key)
-	vec = cpy
-
-	for vec.Shift > 0 {
-		vec = vec.CopySubKey((key >> vec.Shift) & PARTITION_MASK)
+// Set a given key in the vector.
+// Allowed indices are those already set, and that in the append position.
+// Attempts to set key > length is an OutOfBounds error.
+func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
+	if key > vec.Length {
+		return nil, &OutOfBounds{key}
 	}
 
-	if vec.SetSubKey((key & PARTITION_MASK), value) {
-		return cpy, true
+	newRoot, err := vec.Root.Set(key, value)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, false
-}
+	newLength := vec.Length
+	if key == newLength {
+		newLength += 1
+	}
 
-// Make a shallow copy of this node.
-// This copies the node and its internal slice, but not its branches or values.
-func (vec *Vector) Copy() *Vector {
 	return &Vector{
-		Elements: append([]Value(nil), vec.Elements...),
-		Shift:    vec.Shift,
-	}
+		Root:   newRoot,
+		Length: newLength,
+	}, nil
 }
 
-// Return a copy of the root, or a new root if key overflows this root.
-// A new root has an increased shift size.
-func (vec *Vector) NewRoot(key uint32) *Vector {
-	if (1 << vec.Shift) < (key >> PARTITION_BITS) {
-		return vec.Copy()
-	} else {
-		return &Vector{
-			Shift:    vec.Shift + PARTITION_BITS,
-			Elements: []Value{vec},
-		}
-	}
-}
-
-// Set the direct subkey in vec to a copy of itself and return the copy.
-// If the subkey is effectively an append, generate a new node.
-// Mutates, on the assumption that vec is a copy.
-func (vec *Vector) CopySubKey(key uint32) (cpy *Vector) {
-	switch key {
-	case vec.Width():
-		cpy = &Vector{
-			Shift:    (vec.Shift - PARTITION_BITS),
-			Elements: make([]Value, 0),
-		}
-		vec.Elements = append(vec.Elements, cpy)
-	default:
-		cpy = vec.Elements[key].(*Vector).Copy()
-		vec.Elements[key] = cpy
+// Append a value to the end of this vector.
+// A new vector is returned, sharing memory with the original.
+func (vec *Vector) Append(value Value) *Vector {
+	vec, err := vec.Set(vec.Length, value)
+	if err != nil {
+		// this should never happen
+		panic(err)
 	}
 
-	return
-}
-
-// Set the direct subkey in vec to a new value.
-// If the subkey is effectively an append, generate a new slot.
-// Mutates, on the assumption that vec is a copy.
-func (vec *Vector) SetSubKey(key uint32, value Value) bool {
-	switch {
-	case vec.Width() == key:
-		vec.Elements = append(vec.Elements, value)
-	case vec.Width() > key:
-		vec.Elements[key] = value
-	default:
-		return false
-	}
-
-	return true
+	return vec
 }
