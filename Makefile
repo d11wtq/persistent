@@ -1,6 +1,6 @@
 .PHONY: all fmt test build clean
 GOBIN   ?= `which go`
-PACKAGE ?= github.com/d11wtq/persistent
+PACKAGE ?= .
 GOPATH  ?= $(PWD)
 
 all: fmt test build

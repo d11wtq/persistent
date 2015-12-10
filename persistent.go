@@ -1,7 +1,7 @@
 package persistent
 
 import (
-	"github.com/d11wtq/persistent/vector"
+	"./vector"
 )
 
 func Vector() *vector.Vector {
