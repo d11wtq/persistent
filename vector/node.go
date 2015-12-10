@@ -40,6 +40,23 @@ func (node *Node) Set(key uint32, value Value) (into *Node, err error) {
 	return nil, &OutOfBounds{key}
 }
 
+func (node *Node) Pop() (into *Node) {
+	if node.Width() == 0 {
+		return node
+	}
+
+	into = node.Copy()
+	node = into
+
+	for node.Shift > 0 {
+		node = node.CopySubKey(node.Width() - 1)
+	}
+
+	node.Elements = node.Elements[:node.Width()-1]
+
+	return
+}
+
 // Get the number of elements in this node.
 func (node *Node) Width() uint32 {
 	return uint32(len(node.Elements))

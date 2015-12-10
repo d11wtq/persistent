@@ -59,6 +59,13 @@ if err != nil {
 	panic(err)
 }
 fmt.Println("vec1[0] == %s", z) // 42
+
+// pop the last element off the env of vec1
+vec3 := vec1.Pop()
+fmt.Println("vec3 has %d elements", vec3.Count())
+
+// verify that the original vector is unchanged
+fmt.Println("vec1 has %d elements", vec1.Count())
 ```
 
 I plan to experiment with changing the underlying data structure to an RRB Tree

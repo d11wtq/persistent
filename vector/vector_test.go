@@ -377,6 +377,40 @@ func TestAppend(t *testing.T) {
 	}
 }
 
+func TestPop(t *testing.T) {
+	vec := &Vector{
+		Root:   &Node{Elements: []Value{42, 21, 17}},
+		Length: 3,
+	}
+	cpy := vec.Pop()
+
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0: 42,
+			1: 21,
+		},
+	)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 42,
+			1: 21,
+			2: 17,
+		},
+	)
+
+	_, err := cpy.Get(2)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(2) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 2 {
+		t.Fatalf(`expected cpy.Count() == 2, got %s`, cpy.Count())
+	}
+}
+
 func TestNewWithoutArgs(t *testing.T) {
 	vec := New()
 	if vec.Count() != 0 {

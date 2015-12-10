@@ -48,6 +48,7 @@ func (vec *Vector) Get(key uint32) (Value, error) {
 // Set a given key in the vector.
 // Allowed indices are those already set, and that in the append position.
 // Attempts to set key > length is an OutOfBounds error.
+// A new vector is returned, sharing memory with the original.
 func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
 	if key > vec.Length {
 		return nil, &OutOfBounds{key}
@@ -74,9 +75,21 @@ func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
 func (vec *Vector) Append(value Value) *Vector {
 	vec, err := vec.Set(vec.Length, value)
 	if err != nil {
-		// this should never happen
 		panic(err)
 	}
 
 	return vec
+}
+
+// Return the vector with the last element removed.
+// A new vector is returned, sharing memory with the original.
+func (vec *Vector) Pop() *Vector {
+	if vec.Length == 0 {
+		return vec
+	}
+
+	return &Vector{
+		Root:   vec.Root.Pop(),
+		Length: vec.Length - 1,
+	}
 }
