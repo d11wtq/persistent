@@ -93,3 +93,10 @@ func (vec *Vector) Pop() *Vector {
 		Length: vec.Length - 1,
 	}
 }
+
+// Return the sub-vector that lies between indices start and end.
+// Attempting to slice outside of the vector is an OutOfBounds error.
+// A new vector is returned, sharing memory with the original.
+func (vec *Vector) Slice(start, end uint32) (into *Vector, err error) {
+	return vec, nil
+}

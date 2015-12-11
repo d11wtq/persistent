@@ -411,6 +411,104 @@ func TestPop(t *testing.T) {
 	}
 }
 
+func TestPopWithLeafTermination(t *testing.T) {
+	elems := make([]Value, 0, 32)
+	for i := 0; i < 32; i += 1 {
+		elems = append(elems, i)
+	}
+
+	vec := &Vector{
+		Root: &Node{
+			Elements: []Value{
+				&Node{Elements: elems},
+				&Node{Elements: []Value{32}},
+			},
+			Shift: 5,
+		},
+		Length: 33,
+	}
+
+	cpy := vec.Pop()
+
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0:  0,
+			31: 31,
+		},
+	)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0:  0,
+			31: 31,
+			32: 32,
+		},
+	)
+
+	_, err := cpy.Get(32)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(32) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 32 {
+		t.Fatalf(`expected cpy.Count() == 32, got %s`, cpy.Count())
+	}
+
+	cpy = cpy.Pop()
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0:  0,
+			30: 30,
+		},
+	)
+
+	_, err = cpy.Get(31)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(31) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 31 {
+		t.Fatalf(`expected cpy.Count() == 31, got %s`, cpy.Count())
+	}
+}
+
+func TestSlice(t *testing.T) {
+	vec := &Vector{
+		Root:   &Node{Elements: []Value{42, 21, 17}},
+		Length: 3,
+	}
+	cpy, err := vec.Slice(1, vec.Count())
+
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0: 21,
+			1: 17,
+		},
+	)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 42,
+			1: 21,
+			2: 17,
+		},
+	)
+
+	_, err = cpy.Get(2)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(2) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 2 {
+		t.Fatalf(`expected cpy.Count() == 2, got %s`, cpy.Count())
+	}
+}
+
 func TestNewWithoutArgs(t *testing.T) {
 	vec := New()
 	if vec.Count() != 0 {

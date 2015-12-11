@@ -11,16 +11,25 @@ type Node struct {
 // Find the element at a given key starting from this node.
 // If the key does not exist, it is an OutOfBounds error.
 func (node *Node) Get(key uint32) (Value, error) {
+	var idx uint32
+
 	for node.Shift > 0 {
-		node = node.Elements[((key >> node.Shift) & PARTITION_MASK)].(*Node)
+		idx = ((key >> node.Shift) & PARTITION_MASK)
+
+		if node.Width() > idx {
+			node = node.Elements[idx].(*Node)
+		} else {
+			return nil, &OutOfBounds{key}
+		}
 	}
 
-	idx := (key & PARTITION_MASK)
+	idx = (key & PARTITION_MASK)
+
 	if node.Width() > idx {
 		return node.Elements[idx], nil
+	} else {
+		return nil, &OutOfBounds{key}
 	}
-
-	return nil, &OutOfBounds{key}
 }
 
 // Set key in vector to value, returning a new root node.
@@ -40,19 +49,34 @@ func (node *Node) Set(key uint32, value Value) (into *Node, err error) {
 	return nil, &OutOfBounds{key}
 }
 
+// Remove the last element from this node.
 func (node *Node) Pop() (into *Node) {
 	if node.Width() == 0 {
 		return node
 	}
 
+	path := make([]*Node, 0, (node.Shift/PARTITION_BITS + 1))
+
 	into = node.Copy()
 	node = into
+	path = append(path, node)
 
 	for node.Shift > 0 {
 		node = node.CopySubKey(node.Width() - 1)
+		path = append(path, node)
 	}
 
 	node.Elements = node.Elements[:node.Width()-1]
+
+	// remove empty nodes in the path
+	for idx := len(path) - 1; idx > 0; idx -= 1 {
+		node = path[idx]
+
+		if node.Width() == 0 {
+			node = path[idx-1]
+			node.Elements = node.Elements[:node.Width()-1]
+		}
+	}
 
 	return
 }
