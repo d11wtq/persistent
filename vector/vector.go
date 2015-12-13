@@ -1,12 +1,5 @@
 package vector
 
-const (
-	// The number of bits to read for each sub key
-	PARTITION_BITS = 5
-	// The bits we're interested in for each sub key index
-	PARTITION_MASK = 1<<PARTITION_BITS - 1
-)
-
 // Values storable in the vector
 type Value interface{}
 
@@ -19,15 +12,11 @@ type Vector struct {
 }
 
 // Value for the empty vector
-var empty = &Vector{
-	Root:   &Node{Elements: []Value{}, Shift: 0},
-	Length: 0,
-}
+var empty = &Vector{Root: EmptyNode(), Length: 0}
 
 // Return a new empty vector.
 func New(elements ...Value) *Vector {
 	acc := empty
-	// FIXME: Bulk load in chunks of 32 elements
 	for _, v := range elements {
 		acc = acc.Append(v)
 	}
@@ -88,9 +77,11 @@ func (vec *Vector) Pop() *Vector {
 		return vec
 	}
 
+	newLength := vec.Length - 1
+
 	return &Vector{
-		Root:   vec.Root.Pop(),
-		Length: vec.Length - 1,
+		Root:   vec.Root.Truncate(newLength),
+		Length: newLength,
 	}
 }
 

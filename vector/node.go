@@ -1,5 +1,12 @@
 package vector
 
+const (
+	// The number of bits to read for each sub key
+	BITS = 5
+	// The bits we're interested in for each sub key index
+	MASK = 1<<BITS - 1
+)
+
 // Representation of a persistent vector node
 type Node struct {
 	// The elements stored in this node
@@ -8,28 +15,29 @@ type Node struct {
 	Shift uint32
 }
 
+// Create a new empty root node.
+func EmptyNode() *Node {
+	return &Node{Elements: []Value{}, Shift: 0}
+}
+
 // Find the element at a given key starting from this node.
 // If the key does not exist, it is an OutOfBounds error.
-func (node *Node) Get(key uint32) (Value, error) {
-	var idx uint32
-
+func (node *Node) Get(key uint32) (val Value, err error) {
 	for node.Shift > 0 {
-		idx = ((key >> node.Shift) & PARTITION_MASK)
-
-		if node.Width() > idx {
-			node = node.Elements[idx].(*Node)
-		} else {
+		val, err = node.ReadSubKey((key >> node.Shift) & MASK)
+		if err != nil {
 			return nil, &OutOfBounds{key}
 		}
+
+		node = val.(*Node)
 	}
 
-	idx = (key & PARTITION_MASK)
-
-	if node.Width() > idx {
-		return node.Elements[idx], nil
-	} else {
+	val, err = node.ReadSubKey(key & MASK)
+	if err != nil {
 		return nil, &OutOfBounds{key}
 	}
+
+	return
 }
 
 // Set key in vector to value, returning a new root node.
@@ -39,43 +47,41 @@ func (node *Node) Set(key uint32, value Value) (into *Node, err error) {
 	node = into
 
 	for node.Shift > 0 {
-		node = node.CopySubKey((key >> node.Shift) & PARTITION_MASK)
+		node = node.CopySubKey((key >> node.Shift) & MASK)
 	}
 
-	if node.SetSubKey((key & PARTITION_MASK), value) {
+	if node.SetSubKey((key & MASK), value) {
 		return into, nil
 	}
 
 	return nil, &OutOfBounds{key}
 }
 
-// Remove the last element from this node.
-func (node *Node) Pop() (into *Node) {
-	if node.Width() == 0 {
-		return node
+// Truncate the length of this node (and its children).
+// This discards all branches to the right of the length.
+func (node *Node) Truncate(length uint32) (into *Node) {
+	if length == 0 {
+		return EmptyNode()
 	}
 
-	path := make([]*Node, 0, (node.Shift/PARTITION_BITS + 1))
+	var (
+		key uint32 = length
+		idx uint32
+	)
 
 	into = node.Copy()
 	node = into
-	path = append(path, node)
 
 	for node.Shift > 0 {
-		node = node.CopySubKey(node.Width() - 1)
-		path = append(path, node)
+		idx = (key >> node.Shift) & MASK
+		node.Elements = append([]Value(nil), node.Elements[:idx+1]...)
+		node = node.CopySubKey(idx)
 	}
 
-	node.Elements = node.Elements[:node.Width()-1]
+	node.Elements = append([]Value(nil), node.Elements[:(key&MASK)]...)
 
-	// remove empty nodes in the path
-	for idx := len(path) - 1; idx > 0; idx -= 1 {
-		node = path[idx]
-
-		if node.Width() == 0 {
-			node = path[idx-1]
-			node.Elements = node.Elements[:node.Width()-1]
-		}
+	for into.Shift > 0 && into.Width() == 1 {
+		into = into.Elements[0].(*Node)
 	}
 
 	return
@@ -98,14 +104,23 @@ func (node *Node) Copy() *Node {
 // Return a copy of the root, or a new root if key overflows this root.
 // A new root has an increased shift size.
 func (node *Node) NewRoot(key uint32) *Node {
-	if (1 << node.Shift) < (key >> PARTITION_BITS) {
+	if (1 << node.Shift) < (key >> BITS) {
 		return node.Copy()
 	} else {
 		return &Node{
-			Shift:    node.Shift + PARTITION_BITS,
+			Shift:    node.Shift + BITS,
 			Elements: []Value{node},
 		}
 	}
+}
+
+// Get the direct subkey in node, or return OutOfBounds if does not exist.
+func (node *Node) ReadSubKey(key uint32) (Value, error) {
+	if node.Width() > key {
+		return node.Elements[key], nil
+	}
+
+	return nil, &OutOfBounds{key}
 }
 
 // Set the direct subkey in node to a copy of itself and return the copy.
@@ -115,7 +130,7 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 	switch key {
 	case node.Width():
 		into = &Node{
-			Shift:    (node.Shift - PARTITION_BITS),
+			Shift:    (node.Shift - BITS),
 			Elements: make([]Value, 0),
 		}
 		node.Elements = append(node.Elements, into)

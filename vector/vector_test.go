@@ -328,6 +328,26 @@ func TestSetOutOfBounds1Deep(t *testing.T) {
 	}
 }
 
+func TestSetOutOfBoundsMissingBranch2Deep(t *testing.T) {
+	vec := &Vector{
+		Root: &Node{
+			Elements: []Value{
+				&Node{
+					Elements: []Value{42, 21, 17},
+					Shift:    0,
+				},
+			},
+			Shift: 5,
+		},
+		Length: 3,
+	}
+
+	_, err := vec.Set(72, 57)
+	if err == nil {
+		t.Fatalf(`expected vec.Set(72, ...) not to be ok, but was`)
+	}
+}
+
 func TestCount(t *testing.T) {
 	vec := &Vector{
 		Root:   &Node{Elements: []Value{}},
