@@ -495,37 +495,23 @@ func TestPopWithLeafTermination(t *testing.T) {
 	}
 }
 
-func TestSlice(t *testing.T) {
+func TestTruncateOutOfBoundsMissingBranch2Deep(t *testing.T) {
 	vec := &Vector{
-		Root:   &Node{Elements: []Value{42, 21, 17}},
+		Root: &Node{
+			Elements: []Value{
+				&Node{
+					Elements: []Value{42, 21, 17},
+					Shift:    0,
+				},
+			},
+			Shift: 5,
+		},
 		Length: 3,
 	}
-	cpy, err := vec.Slice(1, vec.Count())
 
-	AssertContains(
-		t, cpy,
-		map[uint32]Value{
-			0: 21,
-			1: 17,
-		},
-	)
-
-	AssertContains(
-		t, vec,
-		map[uint32]Value{
-			0: 42,
-			1: 21,
-			2: 17,
-		},
-	)
-
-	_, err = cpy.Get(2)
-	if err == nil {
-		t.Fatalf(`expected cpy.Get(2) not to be ok, but was`)
-	}
-
-	if cpy.Count() != 2 {
-		t.Fatalf(`expected cpy.Count() == 2, got %s`, cpy.Count())
+	cpy := vec.Truncate(72)
+	if cpy.Count() != 3 {
+		t.Fatalf(`expected cpy.Count() == 3, got %s`, cpy.Count())
 	}
 }
 

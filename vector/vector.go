@@ -31,7 +31,11 @@ func (vec *Vector) Count() uint32 {
 // Get the value for a given key in the vector.
 // Access to a key that is not in the vector is an OutOfBounds error.
 func (vec *Vector) Get(key uint32) (Value, error) {
-	return vec.Root.Get(key)
+	if vec.Length > key {
+		return vec.Root.Get(key), nil
+	}
+
+	return nil, &OutOfBounds{key}
 }
 
 // Set a given key in the vector.
@@ -43,18 +47,13 @@ func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
 		return nil, &OutOfBounds{key}
 	}
 
-	newRoot, err := vec.Root.Set(key, value)
-	if err != nil {
-		return nil, err
-	}
-
 	newLength := vec.Length
 	if key == newLength {
 		newLength += 1
 	}
 
 	return &Vector{
-		Root:   newRoot,
+		Root:   vec.Root.Set(key, value),
 		Length: newLength,
 	}, nil
 }
@@ -70,8 +69,23 @@ func (vec *Vector) Append(value Value) *Vector {
 	return vec
 }
 
+// Return the vector with all elements > length removed.
+// A new vector is returned, sharing memory with the original.
+// Attempting to truncate to a length > the current length returns itself.
+func (vec *Vector) Truncate(length uint32) *Vector {
+	if length < vec.Length {
+		return &Vector{
+			Root:   vec.Root.Truncate(length),
+			Length: length,
+		}
+	}
+
+	return vec
+}
+
 // Return the vector with the last element removed.
 // A new vector is returned, sharing memory with the original.
+// Attempting to pop an empty vector, returns itself.
 func (vec *Vector) Pop() *Vector {
 	if vec.Length == 0 {
 		return vec
@@ -83,11 +97,4 @@ func (vec *Vector) Pop() *Vector {
 		Root:   vec.Root.Truncate(newLength),
 		Length: newLength,
 	}
-}
-
-// Return the sub-vector that lies between indices start and end.
-// Attempting to slice outside of the vector is an OutOfBounds error.
-// A new vector is returned, sharing memory with the original.
-func (vec *Vector) Slice(start, end uint32) (into *Vector, err error) {
-	return vec, nil
 }

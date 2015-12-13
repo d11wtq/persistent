@@ -7,7 +7,9 @@ const (
 	MASK = 1<<BITS - 1
 )
 
-// Representation of a persistent vector node
+// Representation of a persistent vector node.
+// Boundary checks are not performed, as it is assumed the consumer is aware of
+// the length of the vector.
 type Node struct {
 	// The elements stored in this node
 	Elements []Value
@@ -21,28 +23,17 @@ func EmptyNode() *Node {
 }
 
 // Find the element at a given key starting from this node.
-// If the key does not exist, it is an OutOfBounds error.
-func (node *Node) Get(key uint32) (val Value, err error) {
+func (node *Node) Get(key uint32) Value {
 	for node.Shift > 0 {
-		val, err = node.ReadSubKey((key >> node.Shift) & MASK)
-		if err != nil {
-			return nil, &OutOfBounds{key}
-		}
-
-		node = val.(*Node)
+		node = node.Elements[((key >> node.Shift) & MASK)].(*Node)
 	}
 
-	val, err = node.ReadSubKey(key & MASK)
-	if err != nil {
-		return nil, &OutOfBounds{key}
-	}
-
-	return
+	return node.Elements[(key & MASK)]
 }
 
 // Set key in vector to value, returning a new root node.
 // Attempting to set a key beyond the current length is an OutOfBounds error.
-func (node *Node) Set(key uint32, value Value) (into *Node, err error) {
+func (node *Node) Set(key uint32, value Value) (into *Node) {
 	into = node.NewRoot(key)
 	node = into
 
@@ -50,11 +41,9 @@ func (node *Node) Set(key uint32, value Value) (into *Node, err error) {
 		node = node.CopySubKey((key >> node.Shift) & MASK)
 	}
 
-	if node.SetSubKey((key & MASK), value) {
-		return into, nil
-	}
+	node.SetSubKey((key & MASK), value)
 
-	return nil, &OutOfBounds{key}
+	return
 }
 
 // Truncate the length of this node (and its children).
@@ -114,15 +103,6 @@ func (node *Node) NewRoot(key uint32) *Node {
 	}
 }
 
-// Get the direct subkey in node, or return OutOfBounds if does not exist.
-func (node *Node) ReadSubKey(key uint32) (Value, error) {
-	if node.Width() > key {
-		return node.Elements[key], nil
-	}
-
-	return nil, &OutOfBounds{key}
-}
-
 // Set the direct subkey in node to a copy of itself and return the copy.
 // If the subkey is effectively an append, generate a new node.
 // Mutates, on the assumption that node is a copy.
@@ -145,15 +125,11 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 // Set the direct subkey in this node to a new value.
 // If the subkey is effectively an append, generate a new slot.
 // Mutates, on the assumption that node is a copy.
-func (node *Node) SetSubKey(key uint32, value Value) bool {
-	switch {
-	case node.Width() == key:
+func (node *Node) SetSubKey(key uint32, value Value) {
+	switch key {
+	case node.Width():
 		node.Elements = append(node.Elements, value)
-	case node.Width() > key:
-		node.Elements[key] = value
 	default:
-		return false
+		node.Elements[key] = value
 	}
-
-	return true
 }
