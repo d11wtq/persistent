@@ -9,9 +9,7 @@ using pointers to shared data, only copying what is modified.
 
     $ go get github.com/d11wtq/persistent
 
-### Data Structures Provided
-
-#### Vector
+### Vector
 
 This implements the same data structure used by Clojure for its Vectors. The
 underlying data structure is a bit-partitioned Hash Array Mapped Trie as

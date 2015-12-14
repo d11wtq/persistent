@@ -91,10 +91,5 @@ func (vec *Vector) Pop() *Vector {
 		return vec
 	}
 
-	newLength := vec.Length - 1
-
-	return &Vector{
-		Root:   vec.Root.Truncate(newLength),
-		Length: newLength,
-	}
+	return vec.Truncate(vec.Length - 1)
 }

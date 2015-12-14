@@ -450,6 +450,10 @@ func TestPopWithLeafTermination(t *testing.T) {
 
 	cpy := vec.Pop()
 
+	if cpy.Root.Shift != 0 {
+		t.Fatalf(`expected cpy.Root.Shift == 0, got %s`, cpy.Root.Shift)
+	}
+
 	AssertContains(
 		t, cpy,
 		map[uint32]Value{
@@ -485,6 +489,10 @@ func TestPopWithLeafTermination(t *testing.T) {
 		},
 	)
 
+	if cpy.Root.Shift != 0 {
+		t.Fatalf(`expected cpy.Root.Shift == 0, got %s`, cpy.Root.Shift)
+	}
+
 	_, err = cpy.Get(31)
 	if err == nil {
 		t.Fatalf(`expected cpy.Get(31) not to be ok, but was`)
@@ -518,6 +526,23 @@ func TestTruncateOutOfBoundsMissingBranch2Deep(t *testing.T) {
 func TestNewWithoutArgs(t *testing.T) {
 	vec := New()
 	if vec.Count() != 0 {
+		t.Fatalf(`expected vec.Count() == 0, got %s`, vec.Count())
+	}
+}
+
+func TestNewWithArgs(t *testing.T) {
+	vec := New(42, 7, 19)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 42,
+			1: 7,
+			2: 19,
+		},
+	)
+
+	if vec.Count() != 3 {
 		t.Fatalf(`expected vec.Count() == 0, got %s`, vec.Count())
 	}
 }

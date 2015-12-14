@@ -69,11 +69,7 @@ func (node *Node) Truncate(length uint32) (into *Node) {
 
 	node.Elements = append([]Value(nil), node.Elements[:(key&MASK)]...)
 
-	for into.Shift > 0 && into.Width() == 1 {
-		into = into.Elements[0].(*Node)
-	}
-
-	return
+	return into.Flatten()
 }
 
 // Get the number of elements in this node.
@@ -132,4 +128,12 @@ func (node *Node) SetSubKey(key uint32, value Value) {
 	default:
 		node.Elements[key] = value
 	}
+}
+
+// Kill any redundant root nodes and return the first real root.
+func (node *Node) Flatten() *Node {
+	for node.Shift > 0 && node.Width() == 1 {
+		node = node.Elements[0].(*Node)
+	}
+	return node
 }
