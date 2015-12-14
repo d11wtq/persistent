@@ -450,10 +450,6 @@ func TestPopWithLeafTermination(t *testing.T) {
 
 	cpy := vec.Pop()
 
-	if cpy.Root.Shift != 0 {
-		t.Fatalf(`expected cpy.Root.Shift == 0, got %s`, cpy.Root.Shift)
-	}
-
 	AssertContains(
 		t, cpy,
 		map[uint32]Value{
