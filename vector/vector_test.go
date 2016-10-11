@@ -19,7 +19,7 @@ func AssertContains(t *testing.T, vec *Vector, elems map[uint32]Value) {
 func TestGet1Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{42, 21, 17},
+			Elements: Fill(42, 21, 17),
 			Shift:    0, // 5 * (1 - 1)
 		},
 		Length: 3,
@@ -58,9 +58,9 @@ func TestGet1Deep(t *testing.T) {
 func TestGet2Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
-				&Node{Elements: []Value{42, 21, 17}},
-			},
+			Elements: Fill(
+				&Node{Elements: Fill(42, 21, 17)},
+			),
 			Shift: 5, // 5 * (2 - 1)
 		},
 		Length: 3,
@@ -96,10 +96,41 @@ func TestGet2Deep(t *testing.T) {
 	}
 }
 
+func TestGetNil1Deep(t *testing.T) {
+	vec := &Vector{
+		Root: &Node{
+			Elements: Fill(42, nil, 17),
+			Shift:    0, // 5 * (1 - 1)
+		},
+		Length: 3,
+	}
+
+	y, err := vec.Get(1)
+	if err != nil {
+		t.Fatalf(`expected vec.Get(1) to be ok, got %s`, err)
+	}
+	if y != nil {
+		t.Fatalf(`expected vec.Get(1) == nil, got %s`, y)
+	}
+
+	z, err := vec.Get(2)
+	if err != nil {
+		t.Fatalf(`expected vec.Get(2) to be ok, got %s`, err)
+	}
+	if z != 17 {
+		t.Fatalf(`expected vec.Get(2) == 17, got %s`, z)
+	}
+
+	_, err = vec.Get(3)
+	if err == nil {
+		t.Fatalf(`expected vec.Get(3) not to be ok, but was`)
+	}
+}
+
 func TestUpdateViaSet1Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{42, 21, 17},
+			Elements: Fill(42, 21, 17),
 			Shift:    0, // 5 * (1 - 1)
 		},
 		Length: 3,
@@ -137,9 +168,9 @@ func TestUpdateViaSet1Deep(t *testing.T) {
 func TestUpdateViaSet2Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
-				&Node{Elements: []Value{42, 21, 17}},
-			},
+			Elements: Fill(
+				&Node{Elements: Fill(42, 21, 17)},
+			),
 			Shift: 5, // 5 * (2 - 1)
 		},
 		Length: 3,
@@ -177,7 +208,7 @@ func TestUpdateViaSet2Deep(t *testing.T) {
 func TestAppendViaSet1Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{42, 21, 17},
+			Elements: Fill(42, 21, 17),
 			Shift:    0, // 5 * (1 - 1)
 		},
 		Length: 3,
@@ -212,9 +243,9 @@ func TestAppendViaSet1Deep(t *testing.T) {
 func TestAppendViaSet2Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
-				&Node{Elements: []Value{42, 21, 17}},
-			},
+			Elements: Fill(
+				&Node{Elements: Fill(42, 21, 17)},
+			),
 			Shift: 5, // 5 * (2 - 1)
 		},
 		Length: 3,
@@ -252,7 +283,7 @@ func TestAppendOverflow1Deep(t *testing.T) {
 		elems = append(elems, i)
 	}
 	vec := &Vector{
-		Root:   &Node{Elements: elems, Shift: 0}, // 5 * (1 - 1)
+		Root:   &Node{Elements: Fill(elems...), Shift: 0}, // 5 * (1 - 1)
 		Length: 32,
 	}
 
@@ -283,11 +314,11 @@ func TestAppendOverflow2Deep(t *testing.T) {
 		for j := 0; j < 32; j += 1 {
 			elems = append(elems, i*32+j)
 		}
-		nodes = append(nodes, &Node{Elements: elems})
+		nodes = append(nodes, &Node{Elements: Fill(elems...)})
 	}
 
 	vec := &Vector{
-		Root:   &Node{Elements: nodes, Shift: 5}, // 5 * (2 - 1)
+		Root:   &Node{Elements: Fill(nodes...), Shift: 5}, // 5 * (2 - 1)
 		Length: 1024,
 	}
 
@@ -316,7 +347,7 @@ func TestAppendOverflow2Deep(t *testing.T) {
 func TestSetOutOfBounds1Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{42, 21, 17},
+			Elements: Fill(42, 21, 17),
 			Shift:    0, // 5 * (1 - 1)
 		},
 		Length: 3,
@@ -331,12 +362,12 @@ func TestSetOutOfBounds1Deep(t *testing.T) {
 func TestSetOutOfBoundsMissingBranch2Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
+			Elements: Fill(
 				&Node{
-					Elements: []Value{42, 21, 17},
+					Elements: Fill(42, 21, 17),
 					Shift:    0,
 				},
-			},
+			),
 			Shift: 5,
 		},
 		Length: 3,
@@ -350,7 +381,7 @@ func TestSetOutOfBoundsMissingBranch2Deep(t *testing.T) {
 
 func TestCount(t *testing.T) {
 	vec := &Vector{
-		Root:   &Node{Elements: []Value{}},
+		Root:   &Node{Elements: Fill()},
 		Length: 0,
 	}
 
@@ -376,7 +407,7 @@ func TestCount(t *testing.T) {
 
 func TestAppend(t *testing.T) {
 	vec := &Vector{
-		Root:   &Node{Elements: []Value{}},
+		Root:   &Node{Elements: Fill()},
 		Length: 0,
 	}
 	vec = vec.Append(42)
@@ -399,7 +430,7 @@ func TestAppend(t *testing.T) {
 
 func TestPop(t *testing.T) {
 	vec := &Vector{
-		Root:   &Node{Elements: []Value{42, 21, 17}},
+		Root:   &Node{Elements: Fill(42, 21, 17)},
 		Length: 3,
 	}
 	cpy := vec.Pop()
@@ -439,10 +470,10 @@ func TestPopWithLeafTermination(t *testing.T) {
 
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
-				&Node{Elements: elems},
-				&Node{Elements: []Value{32}},
-			},
+			Elements: Fill(
+				&Node{Elements: Fill(elems...)},
+				&Node{Elements: Fill(32)},
+			),
 			Shift: 5,
 		},
 		Length: 33,
@@ -502,12 +533,12 @@ func TestPopWithLeafTermination(t *testing.T) {
 func TestTruncateOutOfBoundsMissingBranch2Deep(t *testing.T) {
 	vec := &Vector{
 		Root: &Node{
-			Elements: []Value{
+			Elements: Fill(
 				&Node{
-					Elements: []Value{42, 21, 17},
+					Elements: Fill(42, 21, 17),
 					Shift:    0,
 				},
-			},
+			),
 			Shift: 5,
 		},
 		Length: 3,

@@ -7,6 +7,13 @@ const (
 	MASK = 1<<BITS - 1
 )
 
+// Sentinel type unset values
+type nullSentinel struct {
+}
+
+// Sentinel for unset values
+var Null = &nullSentinel{}
+
 // Representation of a persistent vector node.
 // Boundary checks are not performed, as it is assumed the consumer is aware of
 // the length of the vector.
@@ -19,7 +26,24 @@ type Node struct {
 
 // Create a new empty root node.
 func EmptyNode() *Node {
-	return &Node{Elements: []Value{}, Shift: 0}
+	return NewNode(0)
+}
+
+// Fill elements up to the expected capacity.
+func Fill(elements ...Value) []Value {
+	elements = append(make([]Value, 0, 1<<BITS), elements...)
+	for len(elements) < cap(elements) {
+		elements = append(elements, Null)
+	}
+	return elements
+}
+
+// Create a new node at shift depth, filled with elements.
+func NewNode(shift uint32, elements ...Value) *Node {
+	return &Node{
+		Elements: Fill(elements...),
+		Shift:    shift,
+	}
 }
 
 // Find the element at a given key starting from this node.
@@ -41,7 +65,7 @@ func (node *Node) Set(key uint32, value Value) (into *Node) {
 		node = node.CopySubKey((key >> node.Shift) & MASK)
 	}
 
-	node.SetSubKey((key & MASK), value)
+	node.Elements[(key & MASK)] = value
 
 	return
 }
@@ -63,27 +87,19 @@ func (node *Node) Truncate(length uint32) (into *Node) {
 
 	for node.Shift > 0 {
 		idx = (key >> node.Shift) & MASK
-		node.Elements = append([]Value(nil), node.Elements[:idx+1]...)
+		node.Elements = Fill(node.Elements[:idx+1]...)
 		node = node.CopySubKey(idx)
 	}
 
-	node.Elements = append([]Value(nil), node.Elements[:(key&MASK)]...)
+	node.Elements = Fill(node.Elements[:(key & MASK)]...)
 
 	return into.Flatten()
-}
-
-// Get the number of elements in this node.
-func (node *Node) Width() uint32 {
-	return uint32(len(node.Elements))
 }
 
 // Make a shallow copy of this node.
 // This copies the node and its internal slice, but not its branches or values.
 func (node *Node) Copy() *Node {
-	return &Node{
-		Elements: append([]Value(nil), node.Elements...),
-		Shift:    node.Shift,
-	}
+	return NewNode(node.Shift, node.Elements...)
 }
 
 // Return a copy of the root, or a new root if key overflows this root.
@@ -92,10 +108,7 @@ func (node *Node) NewRoot(key uint32) *Node {
 	if (1 << node.Shift) < (key >> BITS) {
 		return node.Copy()
 	} else {
-		return &Node{
-			Shift:    node.Shift + BITS,
-			Elements: []Value{node},
-		}
+		return NewNode(node.Shift+BITS, node)
 	}
 }
 
@@ -103,14 +116,10 @@ func (node *Node) NewRoot(key uint32) *Node {
 // If the subkey is effectively an append, generate a new node.
 // Mutates, on the assumption that node is a copy.
 func (node *Node) CopySubKey(key uint32) (into *Node) {
-	switch key {
-	case node.Width():
-		into = &Node{
-			Shift:    (node.Shift - BITS),
-			Elements: make([]Value, 0),
-		}
-		node.Elements = append(node.Elements, into)
-	default:
+	if node.Elements[key] == Null {
+		into = NewNode(node.Shift - BITS)
+		node.Elements[key] = into
+	} else {
 		into = node.Elements[key].(*Node).Copy()
 		node.Elements[key] = into
 	}
@@ -118,21 +127,9 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 	return
 }
 
-// Set the direct subkey in this node to a new value.
-// If the subkey is effectively an append, generate a new slot.
-// Mutates, on the assumption that node is a copy.
-func (node *Node) SetSubKey(key uint32, value Value) {
-	switch key {
-	case node.Width():
-		node.Elements = append(node.Elements, value)
-	default:
-		node.Elements[key] = value
-	}
-}
-
 // Kill any redundant root nodes and return the first real root.
 func (node *Node) Flatten() *Node {
-	for node.Shift > 0 && node.Width() == 1 {
+	for node.Shift > 0 && node.Elements[1] == Null {
 		node = node.Elements[0].(*Node)
 	}
 	return node
