@@ -5,11 +5,12 @@ const (
 	BITS = 5
 	// The bits we're interested in for each sub key index
 	MASK = 1<<BITS - 1
+	// The size of each node
+	SIZE = 1 << BITS
 )
 
 // Sentinel type unset values
-type nullSentinel struct {
-}
+type nullSentinel struct{}
 
 // Sentinel for unset values
 var Null = &nullSentinel{}
@@ -20,7 +21,7 @@ var Null = &nullSentinel{}
 type Node struct {
 	// The elements stored in this node
 	Elements []Value
-	// The maximum number of elements
+	// The number of bits to shift off at this level
 	Shift uint32
 }
 
@@ -31,7 +32,7 @@ func EmptyNode() *Node {
 
 // Fill elements up to the expected capacity.
 func Fill(elements ...Value) []Value {
-	elements = append(make([]Value, 0, 1<<BITS), elements...)
+	elements = append(make([]Value, 0, SIZE), elements...)
 	for len(elements) < cap(elements) {
 		elements = append(elements, Null)
 	}
@@ -87,13 +88,53 @@ func (node *Node) Truncate(length uint32) (into *Node) {
 
 	for node.Shift > 0 {
 		idx = (key >> node.Shift) & MASK
-		node.Elements = Fill(node.Elements[:idx+1]...)
+		for i := idx + 1; i < SIZE; i++ {
+			node.Elements[i] = Null
+		}
 		node = node.CopySubKey(idx)
 	}
 
-	node.Elements = Fill(node.Elements[:(key & MASK)]...)
+	for i := (key & MASK); i < SIZE; i++ {
+		node.Elements[i] = Null
+	}
 
-	return into.Flatten()
+	// Root node with only one child
+	for into.Shift > 0 && length < (1<<(into.Shift+BITS)) {
+		into = into.Elements[0].(*Node)
+	}
+
+	return
+}
+
+// Erase memory at the start of this node.
+// Access to elements where idx < length are invalid.
+func (node *Node) EraseTo(length uint32) (into *Node) {
+	if length == 0 {
+		return node
+	}
+
+	var (
+		key uint32 = length
+		idx uint32
+	)
+
+	into = node.Copy()
+	node = into
+
+	for node.Shift > 0 {
+		idx = (key >> node.Shift) & MASK
+
+		for i := idx; i > 0; i-- {
+			node.Elements[i-1] = Null
+		}
+		node = node.CopySubKey(idx)
+	}
+
+	for i := (key & MASK); i > 0; i-- {
+		node.Elements[i-1] = Null
+	}
+
+	return
 }
 
 // Make a shallow copy of this node.
@@ -125,12 +166,4 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 	}
 
 	return
-}
-
-// Kill any redundant root nodes and return the first real root.
-func (node *Node) Flatten() *Node {
-	for node.Shift > 0 && node.Elements[1] == Null {
-		node = node.Elements[0].(*Node)
-	}
-	return node
 }

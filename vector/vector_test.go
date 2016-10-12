@@ -428,6 +428,29 @@ func TestAppend(t *testing.T) {
 	}
 }
 
+func TestPrepend(t *testing.T) {
+	vec := &Vector{
+		Root:   &Node{Elements: Fill()},
+		Length: 0,
+	}
+	vec = vec.Prepend(42)
+	vec = vec.Prepend(21)
+	vec = vec.Prepend(17)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 17,
+			1: 21,
+			2: 42,
+		},
+	)
+
+	if vec.Count() != 3 {
+		t.Fatalf(`expected vec.Count() == 3, got %s`, vec.Count())
+	}
+}
+
 func TestPop(t *testing.T) {
 	vec := &Vector{
 		Root:   &Node{Elements: Fill(42, 21, 17)},
@@ -459,6 +482,84 @@ func TestPop(t *testing.T) {
 
 	if cpy.Count() != 2 {
 		t.Fatalf(`expected cpy.Count() == 2, got %s`, cpy.Count())
+	}
+}
+
+func TestShift(t *testing.T) {
+	vec := &Vector{
+		Root:   &Node{Elements: Fill(42, 21, 17)},
+		Length: 3,
+	}
+	cpy := vec.Shift()
+
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0: 21,
+			1: 17,
+		},
+	)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 42,
+			1: 21,
+			2: 17,
+		},
+	)
+
+	_, err := cpy.Get(2)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(2) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 2 {
+		t.Fatalf(`expected cpy.Count() == 2, got %s`, cpy.Count())
+	}
+}
+
+func TestShiftWithLeafTermination(t *testing.T) {
+	vec := &Vector{
+		Root: &Node{
+			Elements: Fill(
+				&Node{Elements: append(Fill()[:SIZE-1], 9)},
+				&Node{Elements: Fill(42, 21, 17)},
+			),
+			Shift: 5,
+		},
+		Length: 4,
+		Offset: 31,
+	}
+
+	cpy := vec.Shift()
+
+	AssertContains(
+		t, cpy,
+		map[uint32]Value{
+			0: 42,
+			1: 21,
+			2: 17,
+		},
+	)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0: 9,
+			1: 42,
+			2: 21,
+			3: 17,
+		},
+	)
+
+	_, err := cpy.Get(3)
+	if err == nil {
+		t.Fatalf(`expected cpy.Get(3) not to be ok, but was`)
+	}
+
+	if cpy.Count() != 3 {
+		t.Fatalf(`expected cpy.Count() == 3, got %s`, cpy.Count())
 	}
 }
 
