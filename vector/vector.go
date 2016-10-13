@@ -20,7 +20,8 @@ var empty = &Vector{
 	Offset: 0,
 }
 
-// Return a new empty vector.
+// Return a new vector containing elements...
+// Complexity: O(n)
 func New(elements ...Value) *Vector {
 	acc := empty
 	for _, v := range elements {
@@ -30,12 +31,15 @@ func New(elements ...Value) *Vector {
 }
 
 // Return the number of elements in this vector.
+// Complexity: O(1)
 func (vec *Vector) Count() uint32 {
 	return vec.Length
 }
 
 // Get the value for a given key in the vector.
 // Access to a key that is not in the vector is an OutOfBounds error.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Get(key uint32) (Value, error) {
 	if vec.Length > key {
 		return vec.Root.Get(vec.Offset + key), nil
@@ -48,6 +52,8 @@ func (vec *Vector) Get(key uint32) (Value, error) {
 // Allowed indices are those already set, and that in the append position.
 // Attempts to set key > length is an OutOfBounds error.
 // A new vector is returned, sharing memory with the original.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
 	if key > vec.Length {
 		return nil, &OutOfBounds{key}
@@ -67,6 +73,8 @@ func (vec *Vector) Set(key uint32, value Value) (*Vector, error) {
 
 // Append a value to the end of this vector.
 // A new vector is returned, sharing memory with the original.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Append(value Value) *Vector {
 	vec, err := vec.Set(vec.Length, value)
 	if err != nil {
@@ -78,6 +86,8 @@ func (vec *Vector) Append(value Value) *Vector {
 
 // Prepend a value to the start of this vector.
 // A new vector is returned, sharing memory with the original.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Prepend(value Value) *Vector {
 	if vec.Offset == 0 {
 		root, offset := vec.Root.AllocLeft()
@@ -98,6 +108,8 @@ func (vec *Vector) Prepend(value Value) *Vector {
 // Return the vector with all elements > length removed.
 // A new vector is returned, sharing memory with the original.
 // Attempting to truncate to a length > the current length returns itself.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Truncate(length uint32) *Vector {
 	if length < vec.Length {
 		return &Vector{
@@ -113,6 +125,8 @@ func (vec *Vector) Truncate(length uint32) *Vector {
 // Return the vector with all elements < length removed.
 // A new vector is returned, sharing memory with the original.
 // Attempting to drop length > the current length returns the empty vector.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Drop(length uint32) *Vector {
 	if length >= vec.Length {
 		return empty
@@ -130,6 +144,8 @@ func (vec *Vector) Drop(length uint32) *Vector {
 // Return the vector with the last element removed.
 // A new vector is returned, sharing memory with the original.
 // Attempting to pop an empty vector returns itself.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Pop() *Vector {
 	if vec.Length == 0 {
 		return vec
@@ -141,6 +157,8 @@ func (vec *Vector) Pop() *Vector {
 // Return the vector with the first element removed.
 // A new vector is returned, sharing memory with the original.
 // Attempting to shift an empty vector returns itself.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (vec *Vector) Shift() *Vector {
 	if vec.Length == 0 {
 		return vec

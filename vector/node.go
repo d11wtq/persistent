@@ -26,11 +26,13 @@ type Node struct {
 }
 
 // Create a new empty root node.
+// Complexity: O(1)
 func EmptyNode() *Node {
 	return NewNode(0)
 }
 
 // Fill elements up to the expected capacity.
+// Complexity: O(1)
 func Fill(elements ...Value) []Value {
 	elements = append(make([]Value, 0, SIZE), elements...)
 	for len(elements) < cap(elements) {
@@ -40,6 +42,7 @@ func Fill(elements ...Value) []Value {
 }
 
 // Create a new node at shift depth, filled with elements.
+// Complexity: O(1)
 func NewNode(shift uint32, elements ...Value) *Node {
 	return &Node{
 		Elements: Fill(elements...),
@@ -48,6 +51,8 @@ func NewNode(shift uint32, elements ...Value) *Node {
 }
 
 // Find the element at a given key starting from this node.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (node *Node) Get(key uint32) Value {
 	for node.Shift > 0 {
 		node = node.Elements[((key >> node.Shift) & MASK)].(*Node)
@@ -58,6 +63,8 @@ func (node *Node) Get(key uint32) Value {
 
 // Set key in vector to value, returning a new root node.
 // Attempting to set a key beyond the current length is an OutOfBounds error.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (node *Node) Set(key uint32, value Value) (into *Node) {
 	into = node.NewRoot(key)
 	node = into
@@ -73,6 +80,8 @@ func (node *Node) Set(key uint32, value Value) (into *Node) {
 
 // Truncate the length of this node (and its children).
 // This discards all branches to the right of the length.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (node *Node) Truncate(length uint32) (into *Node) {
 	if length == 0 {
 		return EmptyNode()
@@ -108,6 +117,8 @@ func (node *Node) Truncate(length uint32) (into *Node) {
 
 // Erase memory at the start of this node.
 // Access to elements where idx < length are invalid.
+// Complexity: O(log(n))
+// Effectively: O(1)
 func (node *Node) EraseTo(length uint32) (into *Node) {
 	if length == 0 {
 		return node
@@ -139,12 +150,14 @@ func (node *Node) EraseTo(length uint32) (into *Node) {
 
 // Make a shallow copy of this node.
 // This copies the node and its internal slice, but not its branches or values.
+// Complexity: O(1)
 func (node *Node) Copy() *Node {
 	return NewNode(node.Shift, node.Elements...)
 }
 
 // Return a copy of the root, or a new root if key overflows this root.
 // A new root has an increased shift size.
+// Complexity: O(1)
 func (node *Node) NewRoot(key uint32) *Node {
 	if (1 << node.Shift) < (key >> BITS) {
 		return node.Copy()
@@ -156,6 +169,7 @@ func (node *Node) NewRoot(key uint32) *Node {
 // Set the direct subkey in node to a copy of itself and return the copy.
 // If the subkey is effectively an append, generate a new node.
 // Mutates, on the assumption that node is a copy.
+// Complexity: O(1)
 func (node *Node) CopySubKey(key uint32) (into *Node) {
 	if node.Elements[key] == Null {
 		into = NewNode(node.Shift - BITS)
@@ -170,6 +184,7 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 
 // Allocate space to the left of the current node.
 // Returns a new node and the new offset of the existing data.
+// Complexity: O(1)
 func (node *Node) AllocLeft() (*Node, uint32) {
 	var (
 		into = NewNode(node.Shift + BITS)
