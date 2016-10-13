@@ -167,3 +167,14 @@ func (node *Node) CopySubKey(key uint32) (into *Node) {
 
 	return
 }
+
+// Allocate space to the left of the current node.
+// Returns a new node and the new offset of the existing data.
+func (node *Node) AllocLeft() (*Node, uint32) {
+	var (
+		into = NewNode(node.Shift + BITS)
+		half = uint32((1 << (into.Shift + BITS)) / 2)
+	)
+	into.Elements[(half>>into.Shift)&MASK] = node
+	return into, half
+}

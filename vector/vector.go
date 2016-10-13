@@ -80,8 +80,12 @@ func (vec *Vector) Append(value Value) *Vector {
 // A new vector is returned, sharing memory with the original.
 func (vec *Vector) Prepend(value Value) *Vector {
 	if vec.Offset == 0 {
-		// FIXME: Allocate more space to the left in O(1) time
-		return vec
+		root, offset := vec.Root.AllocLeft()
+		vec = &Vector{
+			Root:   root,
+			Length: vec.Length,
+			Offset: offset,
+		}
 	}
 
 	return &Vector{

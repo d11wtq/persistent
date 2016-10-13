@@ -428,7 +428,7 @@ func TestAppend(t *testing.T) {
 	}
 }
 
-func TestPrepend(t *testing.T) {
+func TestPrepend1Deep(t *testing.T) {
 	vec := &Vector{
 		Root:   &Node{Elements: Fill()},
 		Length: 0,
@@ -449,6 +449,38 @@ func TestPrepend(t *testing.T) {
 	if vec.Count() != 3 {
 		t.Fatalf(`expected vec.Count() == 3, got %s`, vec.Count())
 	}
+}
+
+func TestPrepend2Deep(t *testing.T) {
+	nodes := make([]Value, 0, 32)
+	for i := 0; i < 32; i += 1 {
+		elems := make([]Value, 0, 32)
+		for j := 0; j < 32; j += 1 {
+			elems = append(elems, i*32+j)
+		}
+		nodes = append(nodes, &Node{Elements: Fill(elems...)})
+	}
+
+	vec := &Vector{
+		Root:   &Node{Elements: Fill(nodes...), Shift: 5}, // 5 * (2 - 1)
+		Length: 1024,
+	}
+
+	vec = vec.Prepend(42)
+	vec = vec.Prepend(21)
+	vec = vec.Prepend(17)
+
+	AssertContains(
+		t, vec,
+		map[uint32]Value{
+			0:    17,
+			1:    21,
+			2:    42,
+			3:    0,
+			4:    1,
+			1026: 1023,
+		},
+	)
 }
 
 func TestPop(t *testing.T) {
